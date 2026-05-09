@@ -15,7 +15,7 @@ class User(Base):
 
     github_username   = Column(String, primary_key=True)
     github_token      = Column(String, nullable=False)
-    created_at        = Column(DateTime, default=datetime.now(datetime.timezone.utc))
+    created_at        = Column(DateTime, default=datetime.now())
 
 class Settings(Base):
     __tablename__ = "settings"
@@ -36,4 +36,13 @@ class RepoCache(Base):
 
     github_username   = Column(String, primary_key=True)
     data              = Column(JSON, nullable=False)
-    cached_at         = Column(DateTime, default=datetime.now(datetime.timezone.utc))
+    cached_at         = Column(DateTime, default=datetime.now())
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+Base.metadata.create_all(bind=engine)

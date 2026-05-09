@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 import github, processor
+from auth import router as auth_router
 
 app = FastAPI()
+app.include_router(auth_router)
+
 
 @app.get("/profile/{username}")
 async def get_profile(username: str):
@@ -13,6 +16,9 @@ async def get_all_repos(username: str):
     repos = await github.get_repos(username=username)
     return repos
 
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
