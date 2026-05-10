@@ -6,7 +6,7 @@ app = FastAPI()
 app.include_router(auth_router)
 
 
-@app.get("/profile/{username}")
+@app.get("/dev/{username}")
 async def get_profile(username: str):
     user = await github.get_user(username=username)
     return user 

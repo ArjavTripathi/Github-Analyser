@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import jwt
 
-from models import get_db, User, Settings, engine, Base
+from backend.models.models import get_db, User, Settings, engine, Base
 
 router = APIRouter()
 
