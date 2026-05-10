@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-import github, processor
+import github, Logic.processor as processor
 from auth import router as auth_router
 
 app = FastAPI()

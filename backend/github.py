@@ -1,7 +1,7 @@
 import os
 import httpx
 from dotenv import load_dotenv
-import processor
+import Logic.processor as processor
 
 load_dotenv()
 

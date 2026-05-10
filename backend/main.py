@@ -1,5 +1,5 @@
 import asyncio
-import processor, github, scorer
+import backend.Logic.processor as processor, github, backend.Logic.scorer as scorer
 
 
 
