@@ -13,9 +13,9 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
 
-    github_username   = Column(String, primary_key=True)
-    github_token      = Column(String, nullable=False)
-    created_at        = Column(DateTime, default=datetime.now())
+    github_username = Column(String, primary_key=True)
+    github_token    = Column(String, nullable=False)
+    created_at      = Column(DateTime, default=datetime.now)
 
 class Settings(Base):
     __tablename__ = "settings"
@@ -30,13 +30,12 @@ class Settings(Base):
     custom_bio        = Column(String, nullable=True)
     pinned_repos      = Column(JSON, default=list)
 
-
 class RepoCache(Base):
     __tablename__ = "repo_cache"
 
-    github_username   = Column(String, primary_key=True)
-    data              = Column(JSON, nullable=False)
-    cached_at         = Column(DateTime, default=datetime.now())
+    github_username = Column(String, primary_key=True)
+    data            = Column(JSON, nullable=False)
+    cached_at       = Column(DateTime, default=datetime.now)
 
 def get_db():
     db = SessionLocal()

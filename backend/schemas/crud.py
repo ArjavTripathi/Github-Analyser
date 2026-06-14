@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import User, Settings, RepoCache
+from schemas.models import User, Settings, RepoCache
 from datetime import datetime
 
 def get_user(db: Session, username: str) -> User | None:
@@ -9,7 +9,7 @@ def create_user(db: Session, username: str, token: str) -> User:
     user = User(github_username=username, github_token=token)
     db.add(user)
     db.commit()
-    db.refresh(user)  # populates any DB-generated fields like created_at
+    db.refresh(user) 
     return user
 
 def upsert_user(db: Session, username: str, token: str) -> User:
