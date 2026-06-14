@@ -8,7 +8,11 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,    # verifies connection is alive before using it
+    pool_recycle=300,      # recycles connections every 5 minutes
+)
 print(f"Connecting to: {DATABASE_URL[:30]}...")
 SessionLocal = sessionmaker(bind=engine)
 
@@ -83,7 +87,6 @@ def _migrate(eng):
             conn.commit()
 
 
-_migrate(engine)
 
 
 def get_db():
