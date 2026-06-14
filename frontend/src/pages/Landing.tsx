@@ -47,8 +47,7 @@ export function Landing() {
 
           <div>
             <h1 className="text-5xl font-extrabold tracking-tight text-foreground">
-              GitHub{' '}
-              <span style={{ color: 'var(--theme-accent,#534AB7)' }}>Analyser</span>
+              <span style={{ color: 'var(--theme-accent,#534AB7)' }}>Folio</span>
             </h1>
             <p className="mt-3 text-lg text-muted-foreground max-w-sm mx-auto leading-relaxed">
               A beautiful public profile for your GitHub — rankings, languages, and activity in one place.

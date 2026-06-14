@@ -28,7 +28,7 @@ export function Navbar() {
           className="flex items-center gap-2 font-semibold text-foreground hover:opacity-80 transition-opacity"
         >
           <GitBranch className="h-5 w-5" />
-          <span>GitAnalyser</span>
+          <span>Folio</span>
         </Link>
 
         <nav className="flex items-center gap-1">
