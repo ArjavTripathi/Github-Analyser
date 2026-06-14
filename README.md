@@ -15,7 +15,7 @@ A customizable public portfolio page for your GitHub profile. Point anyone at `g
 - **Profile Customization** — logged-in users can override their name, bio, accent color, background, font, and more. Changes apply only to their own profile page.
 - **Repo Customization** — pin a featured repo, hide repos, reorder via drag-and-drop, and add custom descriptions and skill tags per repo.
 - **GitHub OAuth** — login with GitHub in one click, no passwords.
-- **Shareable URLs** — every profile lives at a clean `/u/:username` path.
+- **Shareable URLs** — every profile lives at a clean `/:username` path.
 
 ---
 
