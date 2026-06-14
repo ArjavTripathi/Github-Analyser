@@ -1,6 +1,7 @@
 import os
 import asyncio
 import httpx
+from fastapi import HTTPException
 from dotenv import load_dotenv
 
 import Logic.processor as processor
@@ -16,10 +17,25 @@ HEADERS = {
     "X-GitHub-Api-Version": "2022-11-28",
 }
 
+def _handle_github_error(e: httpx.HTTPStatusError, username: str | None = None) -> None:
+    status = e.response.status_code
+    if status == 404:
+        detail = f"GitHub user '{username}' not found" if username else "Not found"
+        raise HTTPException(status_code=404, detail=detail)
+    if status in (401, 403):
+        raise HTTPException(
+            status_code=502,
+            detail="GitHub API request failed — your GITHUB_TOKEN in .env may be expired or revoked",
+        )
+    raise HTTPException(status_code=502, detail=f"GitHub API error {status}")
+
 async def get_user(username: str) -> dict:
     async with httpx.AsyncClient() as client:
         res = await client.get(f"{BASE_URL}/users/{username}", headers=HEADERS)
-        res.raise_for_status()
+        try:
+            res.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            _handle_github_error(e, username)
         return processor.clean_profiles_json(res.json())
 
 async def get_repos(username: str) -> list:
@@ -32,7 +48,10 @@ async def get_repos(username: str) -> list:
                 headers=HEADERS,
                 params={"per_page": 100, "page": page, "sort": "updated"},
             )
-            res.raise_for_status()
+            try:
+                res.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                _handle_github_error(e, username)
             batch = res.json()
             if not batch:
                 break

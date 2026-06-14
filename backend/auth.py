@@ -66,7 +66,7 @@ async def callback(code: str, db: Session = Depends(get_db)):
         algorithm="HS256",
     )
 
-    return {"token": jwt_token, "username": username}
+    return RedirectResponse(f"{FRONTEND_URL}/auth/callback?token={jwt_token}&username={username}")
 
 
 def get_current_user(

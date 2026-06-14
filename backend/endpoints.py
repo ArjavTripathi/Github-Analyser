@@ -35,13 +35,18 @@ class SettingsUpdate(BaseModel):
     accent_color: Optional[str] = None
     background: Optional[str] = None
     font: Optional[str] = None
+    font_color: Optional[str] = None
     show_language_bar: Optional[bool] = None
     show_heatmap: Optional[bool] = None
+    show_scores: Optional[bool] = None
+    max_repos: Optional[int] = None
     custom_bio: Optional[str] = None
-
-
-class PinnedReposPayload(BaseModel):
-    repos: list[str]
+    profile_description: Optional[str] = None
+    featured_repo: Optional[str] = None
+    repo_order: Optional[list[str]] = None
+    hidden_repos: Optional[list[str]] = None
+    repo_descriptions: Optional[dict[str, str]] = None
+    repo_skills: Optional[dict[str, list[str]]] = None
 
 
 def _is_cache_valid(cache) -> bool:
@@ -66,10 +71,7 @@ async def _get_ranked_repos(username: str, db: Session) -> list[dict]:
 
 @app.get("/profile/{username}")
 async def get_profile(username: str):
-    try:
-        return await github.get_user(username)
-    except Exception:
-        raise HTTPException(status_code=404, detail="User not found")
+    return await github.get_user(username)
 
 
 @app.get("/profile/{username}/rankrepos")
@@ -112,7 +114,7 @@ async def update_settings(
     settings = crud.get_settings(db, current_user.github_username)
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
-    return crud.update_settings(db, current_user.github_username, payload.model_dump(exclude_none=True))
+    return crud.update_settings(db, current_user.github_username, payload.model_dump(exclude_unset=True))
 
 
 @app.post("/settings/reset")
@@ -127,39 +129,6 @@ async def reset_settings(
     db.delete(settings)
     db.commit()
     return crud.create_default_settings(db, username)
-
-
-# ── Pinned Repos ──────────────────────────────────────────────────────────────
-
-@app.post("/profile/pinned")
-async def pin_repos(
-    payload: PinnedReposPayload,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    username = current_user.github_username
-    settings = crud.get_settings(db, username)
-    if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
-    current = settings.pinned_repos or []
-    merged = list(dict.fromkeys(current + payload.repos))  # dedup, preserve order
-    crud.update_settings(db, username, {"pinned_repos": merged})
-    return {"pinned_repos": merged}
-
-
-@app.delete("/profile/pinned/{repo_name}")
-async def unpin_repo(
-    repo_name: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    username = current_user.github_username
-    settings = crud.get_settings(db, username)
-    if not settings:
-        raise HTTPException(status_code=404, detail="Settings not found")
-    updated = [r for r in (settings.pinned_repos or []) if r != repo_name]
-    crud.update_settings(db, username, {"pinned_repos": updated})
-    return {"pinned_repos": updated}
 
 
 # ── Nice to have ──────────────────────────────────────────────────────────────
