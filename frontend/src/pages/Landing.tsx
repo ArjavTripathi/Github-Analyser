@@ -92,7 +92,7 @@ export function Landing() {
                 style={{ backgroundColor: 'var(--theme-accent,#534AB7)' }}
                 asChild
               >
-                <a href="http://localhost:8000/auth/login">
+                <a href={`${import.meta.env.VITE_API_URL}/auth/login`}>
                   <GitBranch className="h-4 w-4" />
                   Login with GitHub
                 </a>

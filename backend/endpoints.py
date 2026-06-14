@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -17,9 +18,14 @@ load_dotenv()
 
 app = FastAPI(title="GitHub Profile Analyser")
 
+# Allow comma-separated list of origins via FRONTEND_URL env var.
+# Falls back to localhost for local dev when the var is blank/missing.
+_raw_origin = os.getenv("FRONTEND_URL", "").strip()
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origin.split(",") if o.strip()] or ["http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

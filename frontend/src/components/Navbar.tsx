@@ -62,7 +62,7 @@ export function Navbar() {
             </>
           ) : (
             <Button variant="outline" size="sm" asChild>
-              <a href="http://localhost:8000/auth/login">
+              <a href={`${import.meta.env.VITE_API_URL}/auth/login`}>
                 <GitBranch className="h-4 w-4 mr-1.5" />
                 Login with GitHub
               </a>
