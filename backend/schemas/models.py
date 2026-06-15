@@ -106,4 +106,5 @@ def get_db():
         db.close()
 
 
+_migrate(engine)
 Base.metadata.create_all(bind=engine)
