@@ -111,7 +111,11 @@ export function Settings() {
         })
         setBgMode(detectBgMode(bg))
         setHiddenRepos(s.hidden_repos ?? [])
-        const sl = s.social_links ?? {}
+        const rawSl = s.social_links
+        const sl: Record<string, string> =
+          typeof rawSl === 'string'
+            ? (() => { try { return JSON.parse(rawSl) } catch { return {} } })()
+            : (rawSl ?? {})
         setSocialLinks({
           twitter:      sl.twitter      ?? '',
           linkedin:     sl.linkedin     ?? '',

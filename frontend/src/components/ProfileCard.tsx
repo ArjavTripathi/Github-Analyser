@@ -11,6 +11,15 @@ const SOCIAL_ICONS: Record<string, React.ReactNode> = {
   github_extra: <GithubIcon className="h-4 w-4" />,
 }
 
+function parseSocialLinks(val: unknown): Record<string, string> {
+  if (!val) return {}
+  if (typeof val === 'string') {
+    try { return JSON.parse(val) } catch { return {} }
+  }
+  if (typeof val === 'object' && !Array.isArray(val)) return val as Record<string, string>
+  return {}
+}
+
 interface ProfileCardProps {
   profile: UserProfile
   settings: UserSettings | null
@@ -138,9 +147,11 @@ export function ProfileCard({ profile, settings }: ProfileCardProps) {
           </div>
 
           {/* Social links */}
-          {settings?.social_links && Object.keys(settings.social_links).length > 0 && (
+          {(() => {
+            const links = parseSocialLinks(settings?.social_links)
+            return Object.keys(links).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-3">
-              {Object.entries(settings.social_links).map(([key, url]) => {
+              {Object.entries(links).map(([key, url]) => {
                 if (!url) return null
                 const href = url.startsWith('http') ? url : `https://${url}`
                 return (
@@ -157,7 +168,7 @@ export function ProfileCard({ profile, settings }: ProfileCardProps) {
                 )
               })}
             </div>
-          )}
+          )})()}
 
           <div className="mt-3 flex flex-wrap gap-5 text-sm">
             <span className="flex items-center gap-1.5">

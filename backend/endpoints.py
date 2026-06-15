@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -54,6 +55,33 @@ class SettingsUpdate(BaseModel):
     repo_descriptions: Optional[dict[str, str]] = None
     repo_skills: Optional[dict[str, list[str]]] = None
     social_links: Optional[dict[str, str]] = None
+
+
+_JSON_LIST_FIELDS  = {"repo_order", "hidden_repos"}
+_JSON_DICT_FIELDS  = {"repo_descriptions", "repo_skills", "social_links"}
+
+def _coerce_settings(s) -> dict:
+    """Return settings as a plain dict, parsing any TEXT-stored JSON fields."""
+    row = {c.name: getattr(s, c.name) for c in s.__table__.columns}
+    for field in _JSON_LIST_FIELDS:
+        v = row.get(field)
+        if isinstance(v, str):
+            try:
+                row[field] = json.loads(v)
+            except (ValueError, TypeError):
+                row[field] = []
+        elif v is None:
+            row[field] = []
+    for field in _JSON_DICT_FIELDS:
+        v = row.get(field)
+        if isinstance(v, str):
+            try:
+                row[field] = json.loads(v)
+            except (ValueError, TypeError):
+                row[field] = {}
+        elif v is None:
+            row[field] = {}
+    return row
 
 
 def _compute_streak(events: list) -> int:
@@ -116,7 +144,7 @@ async def get_settings(username: str, db: Session = Depends(get_db)):
     settings = crud.get_settings(db, username)
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
-    return settings
+    return _coerce_settings(settings)
 
 
 @app.post("/profile/{username}/refresh")
@@ -139,7 +167,8 @@ async def update_settings(
     settings = crud.get_settings(db, current_user.github_username)
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
-    return crud.update_settings(db, current_user.github_username, payload.model_dump(exclude_unset=True))
+    updated = crud.update_settings(db, current_user.github_username, payload.model_dump(exclude_unset=True))
+    return _coerce_settings(updated)
 
 
 @app.post("/settings/reset")
@@ -153,7 +182,7 @@ async def reset_settings(
         raise HTTPException(status_code=404, detail="Settings not found")
     db.delete(settings)
     db.commit()
-    return crud.create_default_settings(db, username)
+    return _coerce_settings(crud.create_default_settings(db, username))
 
 
 # ── Nice to have ──────────────────────────────────────────────────────────────
