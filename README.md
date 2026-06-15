@@ -2,7 +2,7 @@
 
 A customizable public portfolio page for your GitHub profile. Point anyone at `getfolio.page/your-username` and they get a beautifully rendered breakdown of your repos, languages, activity, and stats — all scored and ranked by a custom algorithm, not just follower count.
 
-![Folio Profile Preview](https://github.com/ArjavTripathi/get-folio/raw/main/preview.png)
+Live website sits at: https://www.getfolio.page/
 
 ---
 
