@@ -70,6 +70,7 @@ export interface UserSettings {
   hidden_repos: string[]
   repo_descriptions: Record<string, string>
   repo_skills: Record<string, string[]>
+  social_links: Record<string, string>
 }
 
 export interface UserStats {

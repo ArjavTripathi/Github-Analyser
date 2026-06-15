@@ -53,6 +53,7 @@ class SettingsUpdate(BaseModel):
     hidden_repos: Optional[list[str]] = None
     repo_descriptions: Optional[dict[str, str]] = None
     repo_skills: Optional[dict[str, list[str]]] = None
+    social_links: Optional[dict[str, str]] = None
 
 
 def _is_cache_valid(cache) -> bool:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Save, RotateCcw, ArrowLeft, Eye } from 'lucide-react'
+import { Loader2, Save, RotateCcw, ArrowLeft, Eye, Twitter, Linkedin, Globe, Github } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,6 +18,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { applyTheme } from '@/lib/utils'
 import { getSettings, updateSettings, resetSettings } from '@/lib/api'
 
+interface SocialLinks {
+  twitter: string
+  linkedin: string
+  website: string
+  github_extra: string
+}
+
 interface SettingsForm {
   custom_name: string
   custom_bio: string
@@ -31,6 +38,25 @@ interface SettingsForm {
   show_scores: boolean
   max_repos: string
 }
+
+interface Template {
+  name: string
+  accent_color: string
+  background: string
+  font_color: string
+  font: string
+}
+
+const TEMPLATES: Template[] = [
+  { name: 'Default',  accent_color: '#534AB7', background: '#0d1117', font_color: '#c9d1d9', font: 'sans' },
+  { name: 'Violet',   accent_color: '#7c3aed', background: '#0a0a0f', font_color: '#e2e8f0', font: 'sans' },
+  { name: 'Ocean',    accent_color: '#0ea5e9', background: '#0f172a', font_color: '#bae6fd', font: 'mono' },
+  { name: 'Forest',   accent_color: '#22c55e', background: '#0d1f12', font_color: '#bbf7d0', font: 'sans' },
+  { name: 'Rose',     accent_color: '#f43f5e', background: '#1a0a0e', font_color: '#fecdd3', font: 'serif' },
+  { name: 'Amber',    accent_color: '#f59e0b', background: '#1c1409', font_color: '#fde68a', font: 'mono' },
+]
+
+const DEFAULT_SOCIAL: SocialLinks = { twitter: '', linkedin: '', website: '', github_extra: '' }
 
 const DEFAULTS: SettingsForm = {
   custom_name: '',
@@ -57,6 +83,7 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<SettingsForm>(DEFAULTS)
   const [hiddenRepos, setHiddenRepos] = useState<string[]>([])
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(DEFAULT_SOCIAL)
 
   useEffect(() => {
     if (!isLoggedIn) navigate('/')
@@ -80,6 +107,13 @@ export function Settings() {
           max_repos: s.max_repos ? String(s.max_repos) : '',
         })
         setHiddenRepos(s.hidden_repos ?? [])
+        const sl = s.social_links ?? {}
+        setSocialLinks({
+          twitter:      sl.twitter      ?? '',
+          linkedin:     sl.linkedin     ?? '',
+          website:      sl.website      ?? '',
+          github_extra: sl.github_extra ?? '',
+        })
         applyTheme(s.accent_color ?? undefined, s.background ?? undefined, s.font ?? undefined, s.font_color ?? undefined)
       })
       .catch(() => setError('Failed to load current settings.'))
@@ -97,12 +131,31 @@ export function Settings() {
     }
   }
 
+  function setSocialField(key: keyof SocialLinks, value: string) {
+    setSocialLinks((prev) => ({ ...prev, [key]: value }))
+    setSuccess(null)
+    setError(null)
+  }
+
+  function applyTemplate(t: Template) {
+    setField('accent_color', t.accent_color)
+    setField('background', t.background)
+    setField('font_color', t.font_color)
+    setField('font', t.font)
+    applyTheme(t.accent_color, t.background, t.font, t.font_color)
+  }
+
   async function handleSave() {
     setSaving(true)
     setError(null)
     setSuccess(null)
     try {
       const maxReposNum = form.max_repos.trim() === '' ? null : parseInt(form.max_repos, 10)
+      const cleanedLinks: Record<string, string> = {}
+      if (socialLinks.twitter.trim())      cleanedLinks.twitter      = socialLinks.twitter.trim()
+      if (socialLinks.linkedin.trim())     cleanedLinks.linkedin     = socialLinks.linkedin.trim()
+      if (socialLinks.website.trim())      cleanedLinks.website      = socialLinks.website.trim()
+      if (socialLinks.github_extra.trim()) cleanedLinks.github_extra = socialLinks.github_extra.trim()
       await updateSettings({
         custom_name: form.custom_name || undefined,
         custom_bio: form.custom_bio || undefined,
@@ -115,6 +168,7 @@ export function Settings() {
         show_heatmap: form.show_heatmap,
         show_scores: form.show_scores,
         max_repos: maxReposNum,
+        social_links: cleanedLinks,
       })
       applyTheme(form.accent_color, form.background, form.font, form.font_color)
       setSuccess('Settings saved!')
@@ -133,6 +187,7 @@ export function Settings() {
       await resetSettings()
       setForm(DEFAULTS)
       setHiddenRepos([])
+      setSocialLinks(DEFAULT_SOCIAL)
       applyTheme(DEFAULTS.accent_color, DEFAULTS.background, DEFAULTS.font, DEFAULTS.font_color)
       setSuccess('Settings reset to defaults.')
     } catch (err) {
@@ -233,6 +288,60 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* Social Links */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Social Links</CardTitle>
+          <CardDescription>Links shown as icons on your profile</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="sl_twitter" className="flex items-center gap-1.5">
+              <Twitter className="h-3.5 w-3.5" /> Twitter / X
+            </Label>
+            <Input
+              id="sl_twitter"
+              value={socialLinks.twitter}
+              onChange={(e) => setSocialField('twitter', e.target.value)}
+              placeholder="https://x.com/yourhandle"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sl_linkedin" className="flex items-center gap-1.5">
+              <Linkedin className="h-3.5 w-3.5" /> LinkedIn
+            </Label>
+            <Input
+              id="sl_linkedin"
+              value={socialLinks.linkedin}
+              onChange={(e) => setSocialField('linkedin', e.target.value)}
+              placeholder="https://linkedin.com/in/yourname"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sl_website" className="flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5" /> Personal Site
+            </Label>
+            <Input
+              id="sl_website"
+              value={socialLinks.website}
+              onChange={(e) => setSocialField('website', e.target.value)}
+              placeholder="https://yoursite.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sl_github_extra" className="flex items-center gap-1.5">
+              <Github className="h-3.5 w-3.5" /> Second GitHub / Org
+            </Label>
+            <Input
+              id="sl_github_extra"
+              value={socialLinks.github_extra}
+              onChange={(e) => setSocialField('github_extra', e.target.value)}
+              placeholder="https://github.com/your-org"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Appearance */}
       <Card>
         <CardHeader>
@@ -240,6 +349,30 @@ export function Settings() {
           <CardDescription>Colors and typography — applied only on your profile page</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+
+          {/* Template presets */}
+          <div className="space-y-2">
+            <Label>Templates</Label>
+            <div className="flex flex-wrap gap-2">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => applyTemplate(t)}
+                  title={t.name}
+                  className="group flex flex-col items-center gap-1 rounded-md border border-border p-1.5 text-[10px] text-muted-foreground hover:border-[var(--theme-accent)] transition-colors"
+                >
+                  <span
+                    className="flex h-7 w-14 rounded overflow-hidden border border-border"
+                  >
+                    <span className="flex-1" style={{ backgroundColor: t.background }} />
+                    <span className="w-3" style={{ backgroundColor: t.accent_color }} />
+                  </span>
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -1,5 +1,12 @@
-import { MapPin, Building2, Users, BookOpen } from 'lucide-react'
+import { MapPin, Building2, Users, BookOpen, Twitter, Linkedin, Globe, Github } from 'lucide-react'
 import type { UserProfile, UserSettings } from '@/lib/api'
+
+const SOCIAL_ICONS: Record<string, React.ReactNode> = {
+  twitter:      <Twitter className="h-4 w-4" />,
+  linkedin:     <Linkedin className="h-4 w-4" />,
+  website:      <Globe className="h-4 w-4" />,
+  github_extra: <Github className="h-4 w-4" />,
+}
 
 interface ProfileCardProps {
   profile: UserProfile
@@ -50,6 +57,28 @@ export function ProfileCard({ profile, settings }: ProfileCardProps) {
             </span>
           )}
         </div>
+
+        {/* Social links */}
+        {settings?.social_links && Object.keys(settings.social_links).length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-3">
+            {Object.entries(settings.social_links).map(([key, url]) => {
+              if (!url) return null
+              const href = url.startsWith('http') ? url : `https://${url}`
+              return (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[var(--theme-accent,#534AB7)] transition-colors"
+                  title={key}
+                >
+                  {SOCIAL_ICONS[key] ?? <Globe className="h-4 w-4" />}
+                </a>
+              )
+            })}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap gap-5 text-sm">
           <span className="flex items-center gap-1.5">

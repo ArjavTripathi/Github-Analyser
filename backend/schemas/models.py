@@ -46,6 +46,7 @@ class Settings(Base):
     hidden_repos         = Column(JSON, default=list)
     repo_descriptions    = Column(JSON, default=dict)
     repo_skills          = Column(JSON, default=dict)
+    social_links         = Column(JSON, default=dict)
 
 class RepoCache(Base):
     __tablename__ = "repo_cache"
@@ -80,6 +81,8 @@ def _migrate(eng):
         stmts.append("ALTER TABLE settings ADD COLUMN repo_skills TEXT DEFAULT '{}'")
     if "featured_repo" not in existing:
         stmts.append("ALTER TABLE settings ADD COLUMN featured_repo TEXT")
+    if "social_links" not in existing:
+        stmts.append("ALTER TABLE settings ADD COLUMN social_links TEXT DEFAULT '{}'")
     if stmts:
         with eng.connect() as conn:
             for stmt in stmts:
