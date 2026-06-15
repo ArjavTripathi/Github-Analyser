@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -54,6 +54,24 @@ class SettingsUpdate(BaseModel):
     repo_descriptions: Optional[dict[str, str]] = None
     repo_skills: Optional[dict[str, list[str]]] = None
     social_links: Optional[dict[str, str]] = None
+
+
+def _compute_streak(events: list) -> int:
+    dates: set[date_type] = set()
+    for event in events:
+        raw = event.get("created_at", "")[:10]
+        if raw:
+            try:
+                dates.add(date_type.fromisoformat(raw))
+            except ValueError:
+                pass
+    today = date_type.today()
+    cursor = today if today in dates else today - timedelta(days=1)
+    streak = 0
+    while cursor in dates:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
 
 
 def _is_cache_valid(cache) -> bool:
@@ -150,9 +168,20 @@ async def get_heatmap(username: str):
     return {"heatmap": counts}
 
 
+@app.post("/profile/{username}/view")
+async def record_view(username: str, db: Session = Depends(get_db)):
+    count = crud.increment_view(db, username)
+    return {"count": count}
+
+
 @app.get("/profile/{username}/stats")
 async def get_stats(username: str, db: Session = Depends(get_db)):
-    user, ranked = await _gather_user_and_repos(username, db)
+    import asyncio as _asyncio
+    user, ranked, events = await _asyncio.gather(
+        github.get_user(username),
+        _get_ranked_repos(username, db),
+        github.get_events(username),
+    )
     top_repo_names = [r["name"] for r in ranked[:30]]
     languages = await github.get_languages_for_repos(username, top_repo_names)
 
@@ -166,6 +195,9 @@ async def get_stats(username: str, db: Session = Depends(get_db)):
         created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
         account_age_days = (datetime.now(created.tzinfo) - created).days
 
+    streak = _compute_streak(events)
+    view_count = crud.get_view_count(db, username)
+
     return {
         "total_stars": total_stars,
         "total_forks": total_forks,
@@ -173,16 +205,10 @@ async def get_stats(username: str, db: Session = Depends(get_db)):
         "account_age_days": account_age_days,
         "public_repos": user.get("public_repos"),
         "followers": user.get("followers"),
+        "streak": streak,
+        "view_count": view_count,
     }
 
-
-async def _gather_user_and_repos(username: str, db: Session):
-    import asyncio
-    user, ranked = await asyncio.gather(
-        github.get_user(username),
-        _get_ranked_repos(username, db),
-    )
-    return user, ranked
 
 
 @app.get("/health")

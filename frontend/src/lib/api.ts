@@ -80,6 +80,8 @@ export interface UserStats {
   account_age_days: number
   public_repos: number
   followers: number
+  streak: number
+  view_count: number
 }
 
 export interface Heatmap {
@@ -135,6 +137,10 @@ export async function resetSettings(): Promise<void> {
     headers: authHeaders(),
   })
   return handleResponse<void>(res)
+}
+
+export async function recordView(username: string): Promise<void> {
+  await fetch(`${BASE}/profile/${username}/view`, { method: 'POST' }).catch(() => {})
 }
 
 export async function refreshProfile(username: string): Promise<void> {

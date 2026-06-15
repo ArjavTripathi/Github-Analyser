@@ -12,6 +12,33 @@ export function fontFamilyFromSetting(font?: string | null): string {
 }
 
 /** Detect whether a hex color is perceptually light (> 55% luminance). */
+export type BgMode = 'color' | 'gradient' | 'image'
+
+export function detectBgMode(bg: string): BgMode {
+  if (/^(linear|radial|conic)-gradient/i.test(bg)) return 'gradient'
+  if (/^https?:\/\//i.test(bg) || /^url\(/i.test(bg)) return 'image'
+  return 'color'
+}
+
+export function applyBodyBackground(bg: string) {
+  document.body.style.removeProperty('background-color')
+  document.body.style.removeProperty('background-image')
+  document.body.style.removeProperty('background-size')
+  document.body.style.removeProperty('background-position')
+  document.body.style.removeProperty('background-attachment')
+  const mode = detectBgMode(bg)
+  if (mode === 'gradient') {
+    document.body.style.backgroundImage = bg
+  } else if (mode === 'image') {
+    document.body.style.backgroundImage = `url(${bg})`
+    document.body.style.backgroundSize = 'cover'
+    document.body.style.backgroundPosition = 'center'
+    document.body.style.backgroundAttachment = 'fixed'
+  } else {
+    document.body.style.backgroundColor = bg
+  }
+}
+
 export function isHexLight(hex: string): boolean {
   if (!hex || hex.length < 7) return false
   const r = parseInt(hex.slice(1, 3), 16)
@@ -75,9 +102,10 @@ export function applyTheme(
   const root = document.documentElement
   root.style.setProperty('--theme-accent', accentColor ?? '#534AB7')
   if (background) {
-    document.body.style.backgroundColor = background
+    applyBodyBackground(background)
   } else {
     document.body.style.removeProperty('background-color')
+    document.body.style.removeProperty('background-image')
   }
   if (fontColor) {
     root.style.color = fontColor

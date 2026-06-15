@@ -55,6 +55,12 @@ class RepoCache(Base):
     data            = Column(JSON, nullable=False)
     cached_at       = Column(DateTime, default=datetime.now)
 
+class ViewCounter(Base):
+    __tablename__ = "view_counts"
+
+    github_username = Column(String, primary_key=True)
+    count           = Column(Integer, default=0)
+
 
 def _migrate(eng):
     """Add new Settings columns to an existing DB without data loss."""

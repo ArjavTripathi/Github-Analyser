@@ -1,4 +1,4 @@
-import { Star, GitFork, Code, Calendar } from 'lucide-react'
+import { Star, GitFork, Code, Calendar, Flame, Eye } from 'lucide-react'
 import { formatAccountAge } from '@/lib/utils'
 import type { UserStats } from '@/lib/api'
 
@@ -12,6 +12,8 @@ export function StatsBar({ stats }: StatsBarProps) {
     { icon: <GitFork className="h-4 w-4" />, label: 'Total Forks', value: stats.total_forks.toLocaleString() },
     { icon: <Code className="h-4 w-4" />, label: 'Top Language', value: stats.most_used_language || 'N/A' },
     { icon: <Calendar className="h-4 w-4" />, label: 'Account Age', value: formatAccountAge(stats.account_age_days) },
+    ...(stats.streak > 0 ? [{ icon: <Flame className="h-4 w-4" />, label: 'Day Streak', value: `${stats.streak}d` }] : []),
+    ...(stats.view_count > 0 ? [{ icon: <Eye className="h-4 w-4" />, label: 'Profile Views', value: stats.view_count.toLocaleString() }] : []),
   ]
 
   return (

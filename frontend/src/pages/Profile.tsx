@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Settings, RefreshCw, AlertCircle, Loader2 } from 'lucide-react'
+import { Settings, RefreshCw, AlertCircle, Loader2, Edit2, Eye, X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProfileCard } from '@/components/ProfileCard'
 import { ProfileDescription } from '@/components/ProfileDescription'
@@ -9,7 +9,7 @@ import { LanguageBar } from '@/components/LanguageBar'
 import { RepoList } from '@/components/RepoList'
 import { Heatmap } from '@/components/Heatmap'
 import { useAuth } from '@/hooks/useAuth'
-import { buildProfileThemeVars } from '@/lib/utils'
+import { buildProfileThemeVars, applyBodyBackground } from '@/lib/utils'
 import {
   getProfile,
   getRankedRepos,
@@ -19,8 +19,55 @@ import {
   getHeatmap,
   refreshProfile,
   updateSettings,
+  recordView,
 } from '@/lib/api'
 import type { UserProfile, Repo, Languages, UserSettings, UserStats } from '@/lib/api'
+
+function CompletionNudge({
+  settings,
+  onDismiss,
+}: {
+  settings: UserSettings
+  onDismiss: () => void
+}) {
+  const missing: string[] = []
+  if (!settings.custom_bio) missing.push('a bio')
+  if (!settings.profile_description) missing.push('a profile description')
+  if ((settings.accent_color ?? '#534AB7') === '#534AB7') missing.push('a custom accent colour')
+  if (!settings.featured_repo) missing.push('a featured repo')
+
+  if (missing.length < 2) return null
+
+  const navigate = useNavigate()
+
+  return (
+    <div
+      className="flex items-start justify-between gap-3 rounded-lg border px-4 py-3 animate-fade-in"
+      style={{ borderColor: '#f59e0b40', backgroundColor: '#f59e0b0d' }}
+    >
+      <div className="flex items-start gap-2.5">
+        <Sparkles className="h-4 w-4 mt-0.5 text-amber-400 shrink-0" />
+        <div className="text-sm">
+          <span className="font-medium text-amber-300">Make your profile stand out —</span>{' '}
+          <span className="text-amber-200/80">add {missing.slice(0, -1).join(', ')}{missing.length > 1 ? ' and ' : ''}{missing[missing.length - 1]}.</span>{' '}
+          <button
+            className="underline text-amber-300 hover:text-amber-200 transition-colors"
+            onClick={() => navigate(`/settings`)}
+          >
+            Open Settings
+          </button>
+        </div>
+      </div>
+      <button
+        onClick={onDismiss}
+        className="text-amber-400/60 hover:text-amber-300 transition-colors shrink-0 mt-0.5"
+        aria-label="Dismiss"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
 
 export function Profile() {
   const { username } = useParams<{ username: string }>()
@@ -28,6 +75,10 @@ export function Profile() {
   const { isLoggedIn, username: authUsername } = useAuth()
 
   const isOwner = isLoggedIn && authUsername === username
+  const [editMode, setEditMode] = useState(false)
+  const [nudgeDismissed, setNudgeDismissed] = useState(() => {
+    return localStorage.getItem(`nudge_dismissed_${username}`) === '1'
+  })
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -40,9 +91,15 @@ export function Profile() {
   const [stats, setStats] = useState<UserStats | null>(null)
   const [heatmapData, setHeatmapData] = useState<Record<string, number>>({})
 
+  const viewRecorded = useRef(false)
+
   useEffect(() => {
     return () => {
       document.body.style.removeProperty('background-color')
+      document.body.style.removeProperty('background-image')
+      document.body.style.removeProperty('background-size')
+      document.body.style.removeProperty('background-position')
+      document.body.style.removeProperty('background-attachment')
     }
   }, [])
 
@@ -73,7 +130,7 @@ export function Profile() {
       if (settingsData.status === 'fulfilled') {
         const s = settingsData.value
         setSettings(s)
-        document.body.style.backgroundColor = s.background ?? '#0d1117'
+        applyBodyBackground(s.background ?? '#0d1117')
       }
       if (statsData.status === 'fulfilled') setStats(statsData.value)
       if (heatData.status === 'fulfilled') setHeatmapData(heatData.value.heatmap)
@@ -87,6 +144,18 @@ export function Profile() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Record a view once per mount for non-owners
+  useEffect(() => {
+    if (!username || isOwner || viewRecorded.current) return
+    viewRecorded.current = true
+    recordView(username)
+  }, [username, isOwner])
+
+  function dismissNudge() {
+    localStorage.setItem(`nudge_dismissed_${username}`, '1')
+    setNudgeDismissed(true)
+  }
 
   async function handleRefresh() {
     if (!username) return
@@ -190,11 +259,14 @@ export function Profile() {
   const showHeatmap   = settings?.show_heatmap ?? true
   const profileDesc   = settings?.profile_description ?? ''
 
+  // Only pass owner capabilities when edit mode is active
+  const ownerEditing = isOwner && editMode
+
   const themeVars = buildProfileThemeVars(background, accentColor, fontColor, settings?.font ?? undefined)
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-6" style={themeVars}>
-      {/* Owner controls */}
+      {/* Owner banner */}
       {isOwner && (
         <div
           className="flex items-center justify-between rounded-lg border px-4 py-2 animate-fade-in"
@@ -202,16 +274,38 @@ export function Profile() {
         >
           <span className="text-sm font-medium" style={{ color: accentColor }}>Your profile</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
               <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditMode((e) => !e)}
+              style={editMode ? { borderColor: accentColor, color: accentColor } : {}}
+            >
+              {editMode ? <Eye className="h-3.5 w-3.5 mr-1.5" /> : <Edit2 className="h-3.5 w-3.5 mr-1.5" />}
+              {editMode ? 'Visitor view' : 'Edit'}
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
               <Settings className="h-3.5 w-3.5 mr-1.5" />
-              Edit Settings
+              Settings
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Profile completion nudge */}
+      {isOwner && !nudgeDismissed && settings && (
+        <CompletionNudge
+          settings={settings}
+          onDismiss={dismissNudge}
+        />
       )}
 
       {/* Profile Card */}
@@ -249,13 +343,13 @@ export function Profile() {
             hiddenRepos={hiddenRepos}
             repoDescriptions={repoDescs}
             repoSkills={repoSkills}
-            isOwner={isOwner}
+            isOwner={ownerEditing}
             showBestBadge={showBestBadge}
             maxRepos={maxRepos}
-            onSetFeatured={isOwner ? handleSetFeatured : undefined}
-            onReorder={handleReorder}
-            onHideRepo={isOwner ? handleHideRepo : undefined}
-            onSaveRepoCustomization={isOwner ? handleSaveRepoCustomization : undefined}
+            onSetFeatured={ownerEditing ? handleSetFeatured : undefined}
+            onReorder={ownerEditing ? handleReorder : undefined}
+            onHideRepo={ownerEditing ? handleHideRepo : undefined}
+            onSaveRepoCustomization={ownerEditing ? handleSaveRepoCustomization : undefined}
           />
         </section>
       )}

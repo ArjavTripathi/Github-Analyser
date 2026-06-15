@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Save, RotateCcw, ArrowLeft, Eye, Twitter, Linkedin, Globe, Github } from 'lucide-react'
+import { Loader2, Save, RotateCcw, ArrowLeft, Eye, Globe } from 'lucide-react'
+import { XIcon, LinkedinIcon, GithubIcon } from '@/components/BrandIcons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
-import { applyTheme } from '@/lib/utils'
+import { applyTheme, detectBgMode, type BgMode } from '@/lib/utils'
 import { getSettings, updateSettings, resetSettings } from '@/lib/api'
 
 interface SocialLinks {
@@ -82,6 +83,7 @@ export function Settings() {
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<SettingsForm>(DEFAULTS)
+  const [bgMode, setBgMode] = useState<BgMode>('color')
   const [hiddenRepos, setHiddenRepos] = useState<string[]>([])
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(DEFAULT_SOCIAL)
 
@@ -93,12 +95,13 @@ export function Settings() {
     if (!username) return
     getSettings(username)
       .then((s) => {
+        const bg = s.background ?? '#0d1117'
         setForm({
           custom_name: s.custom_name ?? '',
           custom_bio: s.custom_bio ?? '',
           profile_description: s.profile_description ?? '',
           accent_color: s.accent_color ?? '#534AB7',
-          background: s.background ?? '#0d1117',
+          background: bg,
           font_color: s.font_color ?? '#c9d1d9',
           font: s.font ?? 'sans',
           show_language_bar: s.show_language_bar,
@@ -106,6 +109,7 @@ export function Settings() {
           show_scores: s.show_scores,
           max_repos: s.max_repos ? String(s.max_repos) : '',
         })
+        setBgMode(detectBgMode(bg))
         setHiddenRepos(s.hidden_repos ?? [])
         const sl = s.social_links ?? {}
         setSocialLinks({
@@ -142,7 +146,22 @@ export function Settings() {
     setField('background', t.background)
     setField('font_color', t.font_color)
     setField('font', t.font)
+    setBgMode('color')
     applyTheme(t.accent_color, t.background, t.font, t.font_color)
+  }
+
+  function switchBgMode(mode: BgMode) {
+    setBgMode(mode)
+    if (mode === 'color') {
+      setField('background', '#0d1117')
+      applyTheme(form.accent_color, '#0d1117', form.font, form.font_color)
+    } else if (mode === 'gradient') {
+      const grad = 'linear-gradient(135deg, #0d1117 0%, #1a0a2e 100%)'
+      setField('background', grad)
+      applyTheme(form.accent_color, grad, form.font, form.font_color)
+    } else {
+      setField('background', '')
+    }
   }
 
   async function handleSave() {
@@ -171,7 +190,8 @@ export function Settings() {
         social_links: cleanedLinks,
       })
       applyTheme(form.accent_color, form.background, form.font, form.font_color)
-      setSuccess('Settings saved!')
+      setSuccess('Settings saved! Redirecting…')
+      setTimeout(() => navigate(`/${username}`), 900)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings.')
     } finally {
@@ -297,7 +317,7 @@ export function Settings() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="sl_twitter" className="flex items-center gap-1.5">
-              <Twitter className="h-3.5 w-3.5" /> Twitter / X
+              <XIcon className="h-3.5 w-3.5" /> Twitter / X
             </Label>
             <Input
               id="sl_twitter"
@@ -308,7 +328,7 @@ export function Settings() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="sl_linkedin" className="flex items-center gap-1.5">
-              <Linkedin className="h-3.5 w-3.5" /> LinkedIn
+              <LinkedinIcon className="h-3.5 w-3.5" /> LinkedIn
             </Label>
             <Input
               id="sl_linkedin"
@@ -330,7 +350,7 @@ export function Settings() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="sl_github_extra" className="flex items-center gap-1.5">
-              <Github className="h-3.5 w-3.5" /> Second GitHub / Org
+              <GithubIcon className="h-3.5 w-3.5" /> Second GitHub / Org
             </Label>
             <Input
               id="sl_github_extra"
@@ -374,7 +394,7 @@ export function Settings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 items-start">
             <div className="space-y-2">
               <Label>Highlight Color</Label>
               <div className="flex items-center gap-3">
@@ -389,18 +409,92 @@ export function Settings() {
               <div className="h-2.5 rounded-full" style={{ backgroundColor: form.accent_color }} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Background Color</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={form.background}
-                  onChange={(e) => setField('background', e.target.value)}
-                  className="h-10 w-14 cursor-pointer rounded-md border border-input p-0.5"
-                />
-                <span className="text-xs text-muted-foreground font-mono">{form.background}</span>
+            <div className="space-y-2 col-span-2">
+              <Label>Background</Label>
+              {/* Mode tabs */}
+              <div className="flex rounded-md border border-input overflow-hidden text-xs w-fit">
+                {(['color', 'gradient', 'image'] as BgMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => switchBgMode(m)}
+                    className={`px-3 py-1.5 capitalize transition-colors ${bgMode === m ? 'bg-[var(--theme-accent,#534AB7)] text-white' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    {m === 'image' ? 'Image URL' : m.charAt(0).toUpperCase() + m.slice(1)}
+                  </button>
+                ))}
               </div>
-              <div className="h-2.5 rounded-full border border-border" style={{ backgroundColor: form.background }} />
+
+              {bgMode === 'color' && (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={form.background.startsWith('#') ? form.background : '#0d1117'}
+                    onChange={(e) => {
+                      setField('background', e.target.value)
+                      applyTheme(form.accent_color, e.target.value, form.font, form.font_color)
+                    }}
+                    className="h-10 w-14 cursor-pointer rounded-md border border-input p-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground font-mono">{form.background}</span>
+                </div>
+              )}
+
+              {bgMode === 'gradient' && (
+                <div className="space-y-2">
+                  <Input
+                    value={form.background}
+                    onChange={(e) => {
+                      setField('background', e.target.value)
+                      applyTheme(form.accent_color, e.target.value, form.font, form.font_color)
+                    }}
+                    placeholder="linear-gradient(135deg, #0d1117 0%, #1a0a2e 100%)"
+                    className="font-mono text-xs"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'linear-gradient(135deg, #0d1117 0%, #1a0a2e 100%)',
+                      'linear-gradient(135deg, #0f172a 0%, #0a2020 100%)',
+                      'linear-gradient(to bottom, #0d1409 0%, #0a1420 100%)',
+                      'radial-gradient(ellipse at top, #1a0a2e 0%, #0d1117 60%)',
+                    ].map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        title={g}
+                        onClick={() => {
+                          setField('background', g)
+                          applyTheme(form.accent_color, g, form.font, form.font_color)
+                        }}
+                        className="h-6 w-16 rounded border border-border hover:border-[var(--theme-accent)] transition-colors"
+                        style={{ backgroundImage: g }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {bgMode === 'image' && (
+                <Input
+                  value={form.background}
+                  onChange={(e) => {
+                    setField('background', e.target.value)
+                    applyTheme(form.accent_color, e.target.value, form.font, form.font_color)
+                  }}
+                  placeholder="https://example.com/background.jpg"
+                />
+              )}
+
+              <div
+                className="h-2.5 rounded-full border border-border"
+                style={
+                  bgMode === 'color'
+                    ? { backgroundColor: form.background }
+                    : bgMode === 'gradient'
+                    ? { backgroundImage: form.background }
+                    : { backgroundImage: `url(${form.background})`, backgroundSize: 'cover' }
+                }
+              />
             </div>
 
             <div className="space-y-2">

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from schemas.models import User, Settings, RepoCache
+from schemas.models import User, Settings, RepoCache, ViewCounter
 from datetime import datetime
 
 def get_user(db: Session, username: str) -> User | None:
@@ -52,3 +52,17 @@ def set_cache(db: Session, username: str, data: dict) -> RepoCache:
         cache.cached_at = datetime.now()
     db.commit()
     return cache
+
+def increment_view(db: Session, username: str) -> int:
+    vc = db.query(ViewCounter).filter_by(github_username=username).first()
+    if not vc:
+        vc = ViewCounter(github_username=username, count=1)
+        db.add(vc)
+    else:
+        vc.count = (vc.count or 0) + 1
+    db.commit()
+    return vc.count
+
+def get_view_count(db: Session, username: str) -> int:
+    vc = db.query(ViewCounter).filter_by(github_username=username).first()
+    return vc.count if vc else 0
